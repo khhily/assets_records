@@ -10,14 +10,21 @@ const router = useRouter();
 const route = useRoute();
 const assetStore = useAssetStore();
 
-const batchId = ref('');
+const batchId = ref<number | null>(null);
+const batchNo = ref('');
 const assets = ref<Asset[]>([]);
 const assetFormRef = ref<FormInstance>();
 const isEditMode = ref(false);
+const loading = ref(false);
 
 // 检查是否是编辑模式
-onMounted(() => {
-  const routeBatchId = route.params.batchId as string;
+onMounted(async () => {
+  // 先加载所有资产数据
+  if (assetStore.assets.length === 0) {
+    await assetStore.fetchAssets();
+  }
+
+  const routeBatchId = route.params.batchId ? Number(route.params.batchId) : null;
   if (routeBatchId) {
     isEditMode.value = true;
     batchId.value = routeBatchId;
@@ -25,6 +32,7 @@ onMounted(() => {
     // 查找该批次的资产
     const batch = assetStore.assetsByBatch.find((b) => b.id === routeBatchId);
     if (batch) {
+      batchNo.value = batch.batchNo;
       // 复制资产数据以避免直接修改 store 中的数据
       assets.value = batch.assets.map((asset) => ({ ...asset }));
     } else {
@@ -37,18 +45,17 @@ onMounted(() => {
   }
 });
 
-const rules = reactive<FormRules>({
-  batchId: [{ required: true, message: '请输入批次号', trigger: 'blur' }],
-});
+// 移除批次号验证规则，只在编辑模式下需要
+const rules = reactive<FormRules>({});
 
 const assetRules = reactive<FormRules>({
   name: [{ required: true, message: '请输入资产名称', trigger: 'blur' }],
-  type: [{ required: true, message: '请选择资产类型', trigger: 'change' }],
+  assetType: [{ required: true, message: '请选择资产类型', trigger: 'change' }],
   amount: [
     { required: true, message: '请输入金额', trigger: 'blur' },
-    { type: 'number', min: 0.01, message: '金额必须大于0', trigger: 'blur' },
+    { type: 'integer', min: 1, message: '金额必须是大于0的整数', trigger: 'blur' },
   ],
-  expiryDate: [
+  maturityDate: [
     {
       required: true,
       message: '请选择到期日期',
@@ -56,13 +63,13 @@ const assetRules = reactive<FormRules>({
       validator: (rule, value, callback) => {
         const index = Number(rule.field.split('.')[1]);
         const asset = assets.value[index];
-        const requiresExpiryDate = [
+        const requiresMaturityDate = [
           AssetType.BankFixed,
           AssetType.DepositInvestment,
           AssetType.InsuranceInvestment,
-        ].includes(asset.type);
+        ].includes(asset.assetType);
 
-        if (requiresExpiryDate && !asset.expiryDate) {
+        if (requiresMaturityDate && !asset.maturityDate) {
           callback(new Error('请选择到期日期'));
         } else {
           callback();
@@ -84,10 +91,10 @@ const assetTypeOptions = [
 const addAssetForm = () => {
   assets.value.push({
     name: '',
-    type: AssetType.BankCurrent,
+    assetType: AssetType.BankCurrent,
     amount: 0,
-    expiryDate: '',
-    batchId: batchId.value,
+    maturityDate: null,
+    batchId: batchId.value || 0, // 在新建模式下，这个值会是0
   });
 };
 
@@ -100,26 +107,28 @@ const submitForm = async () => {
 
   try {
     await assetFormRef.value.validate();
+    loading.value = true;
 
-    // 所有资产设置批次号
-    for (const asset of assets.value) {
-      asset.batchId = batchId.value;
-    }
-
-    if (isEditMode.value) {
-      // 更新资产
-      assetStore.updateAssets(batchId.value, assets.value);
+    if (isEditMode.value && batchId.value) {
+      // 编辑模式：设置批次号并更新资产
+      for (const asset of assets.value) {
+        asset.batchId = batchId.value;
+      }
+      await assetStore.updateAssets(batchId.value, assets.value);
       ElMessage.success('更新成功');
     } else {
-      // 添加新资产
-      assetStore.addAssets(assets.value);
+      // 新建模式：不设置批次号，由后端管理
+      await assetStore.addAssets(assets.value);
       ElMessage.success('添加成功');
     }
 
     router.push('/');
   } catch (error) {
-    // 验证失败
-    console.error('表单验证失败', error);
+    // 验证失败或API错误
+    console.error('操作失败', error);
+    ElMessage.error('操作失败，请检查表单或网络连接');
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -135,9 +144,16 @@ const goBack = () => {
       <el-button @click="goBack">返回</el-button>
     </div>
 
-    <el-form ref="assetFormRef" :model="{ batchId, assets }" :rules="rules" label-width="120px">
-      <el-form-item label="批次号" prop="batchId" required>
-        <el-input v-model="batchId" placeholder="请输入批次号" :disabled="isEditMode" />
+    <el-form
+      ref="assetFormRef"
+      :model="{ batchId, batchNo, assets }"
+      :rules="rules"
+      label-width="120px"
+      @submit.native.prevent="submitForm"
+    >
+      <!-- 只在编辑模式下显示批次号 -->
+      <el-form-item v-if="isEditMode" label="批次号" prop="batchNo">
+        <el-input v-model="batchNo" disabled />
       </el-form-item>
 
       <div class="assets-section">
@@ -155,8 +171,8 @@ const goBack = () => {
             <el-input v-model="asset.name" placeholder="请输入资产名称" />
           </el-form-item>
 
-          <el-form-item :label="'资产类型'" :prop="`assets.${index}.type`" :rules="assetRules.type" required>
-            <el-select v-model="asset.type" placeholder="请选择资产类型" style="width: 100%">
+          <el-form-item :label="'资产类型'" :prop="`assets.${index}.assetType`" :rules="assetRules.assetType" required>
+            <el-select v-model="asset.assetType" placeholder="请选择资产类型" style="width: 100%">
               <el-option
                 v-for="option in assetTypeOptions"
                 :key="option.value"
@@ -167,20 +183,29 @@ const goBack = () => {
           </el-form-item>
 
           <el-form-item :label="'金额'" :prop="`assets.${index}.amount`" :rules="assetRules.amount" required>
-            <el-input-number v-model="asset.amount" :min="0.01" style="width: 100%" />
+            <el-input-number
+              v-model="asset.amount"
+              :min="1"
+              :precision="0"
+              :step="1"
+              controls-position="right"
+              style="width: 100%"
+            />
           </el-form-item>
 
           <el-form-item
             :label="'到期时间'"
-            :prop="`assets.${index}.expiryDate`"
-            :rules="assetRules.expiryDate"
+            :prop="`assets.${index}.maturityDate`"
+            :rules="assetRules.maturityDate"
             v-if="
-              [AssetType.BankFixed, AssetType.DepositInvestment, AssetType.InsuranceInvestment].includes(asset.type)
+              [AssetType.BankFixed, AssetType.DepositInvestment, AssetType.InsuranceInvestment].includes(
+                asset.assetType
+              )
             "
             required
           >
             <el-date-picker
-              v-model="asset.expiryDate"
+              v-model="asset.maturityDate"
               type="date"
               placeholder="选择到期日期"
               style="width: 100%"
@@ -196,7 +221,7 @@ const goBack = () => {
       </div>
 
       <el-form-item class="form-actions">
-        <el-button type="primary" @click="submitForm">{{ isEditMode ? '保存' : '提交' }}</el-button>
+        <el-button type="primary" native-type="submit" :loading="loading">{{ isEditMode ? '保存' : '提交' }}</el-button>
         <el-button @click="goBack">取消</el-button>
       </el-form-item>
     </el-form>

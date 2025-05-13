@@ -22,16 +22,33 @@ export const AssetTypeNames: { [key: number]: string } = {
 export interface Asset {
   id?: number;
   name: string;
-  type: AssetType;
+  assetType: AssetType; // 改为assetType
   amount: number;
-  expiryDate: string;
+  maturityDate: string | null;
   createdAt?: string;
   updatedAt?: string;
-  batchId: string;
+  batchId: number;
+  batchNo?: string;
 }
 
 // 批次接口
 export interface Batch {
-  id: string;
+  id: number;
+  batchNo: string;
+  createdTime?: string;
+  lastModifiedTime?: string;
+  totalAmount?: number;
+  assets: Asset[];
+}
+
+// API返回的数据结构
+export interface AssetBatchResponse {
+  batch: {
+    id: number;
+    batchNo: string;
+    createdTime?: string;
+    lastModifiedTime?: string;
+    totalAmount?: number;
+  };
   assets: Asset[];
 }
