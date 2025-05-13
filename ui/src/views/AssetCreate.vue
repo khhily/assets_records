@@ -30,11 +30,11 @@ onMounted(async () => {
     batchId.value = routeBatchId;
 
     // 查找该批次的资产
-    const batch = assetStore.assetsByBatch.find((b) => b.id === routeBatchId);
+    const batch = assetStore.assetsByBatch.find(b => b.id === routeBatchId);
     if (batch) {
       batchNo.value = batch.batchNo;
       // 复制资产数据以避免直接修改 store 中的数据
-      assets.value = batch.assets.map((asset) => ({ ...asset }));
+      assets.value = batch.assets.map(asset => ({ ...asset }));
     } else {
       ElMessage.error('未找到该批次');
       router.push('/');
@@ -60,7 +60,7 @@ const assetRules = reactive<FormRules>({
       required: true,
       message: '请选择到期日期',
       trigger: 'change',
-      validator: (rule, value, callback) => {
+      validator: (rule: any, _: any, callback) => {
         const index = Number(rule.field.split('.')[1]);
         const asset = assets.value[index];
         const requiresMaturityDate = [
@@ -149,7 +149,7 @@ const goBack = () => {
       :model="{ batchId, batchNo, assets }"
       :rules="rules"
       label-width="120px"
-      @submit.native.prevent="submitForm"
+      @submit.prevent="submitForm"
     >
       <!-- 只在编辑模式下显示批次号 -->
       <el-form-item v-if="isEditMode" label="批次号" prop="batchNo">
@@ -162,16 +162,31 @@ const goBack = () => {
         <div v-for="(asset, index) in assets" :key="index" class="asset-form">
           <div class="asset-form-header">
             <h3>资产 #{{ index + 1 }}</h3>
-            <el-button type="danger" size="small" @click="removeAsset(index)" :disabled="assets.length === 1">
+            <el-button
+              type="danger"
+              size="small"
+              :disabled="assets.length === 1"
+              @click="removeAsset(index)"
+            >
               删除
             </el-button>
           </div>
 
-          <el-form-item :label="'资产名称'" :prop="`assets.${index}.name`" :rules="assetRules.name" required>
+          <el-form-item
+            :label="'资产名称'"
+            :prop="`assets.${index}.name`"
+            :rules="assetRules.name"
+            required
+          >
             <el-input v-model="asset.name" placeholder="请输入资产名称" />
           </el-form-item>
 
-          <el-form-item :label="'资产类型'" :prop="`assets.${index}.assetType`" :rules="assetRules.assetType" required>
+          <el-form-item
+            :label="'资产类型'"
+            :prop="`assets.${index}.assetType`"
+            :rules="assetRules.assetType"
+            required
+          >
             <el-select v-model="asset.assetType" placeholder="请选择资产类型" style="width: 100%">
               <el-option
                 v-for="option in assetTypeOptions"
@@ -182,7 +197,12 @@ const goBack = () => {
             </el-select>
           </el-form-item>
 
-          <el-form-item :label="'金额'" :prop="`assets.${index}.amount`" :rules="assetRules.amount" required>
+          <el-form-item
+            :label="'金额'"
+            :prop="`assets.${index}.amount`"
+            :rules="assetRules.amount"
+            required
+          >
             <el-input-number
               v-model="asset.amount"
               :min="1"
@@ -194,14 +214,16 @@ const goBack = () => {
           </el-form-item>
 
           <el-form-item
+            v-if="
+              [
+                AssetType.BankFixed,
+                AssetType.DepositInvestment,
+                AssetType.InsuranceInvestment,
+              ].includes(asset.assetType)
+            "
             :label="'到期时间'"
             :prop="`assets.${index}.maturityDate`"
             :rules="assetRules.maturityDate"
-            v-if="
-              [AssetType.BankFixed, AssetType.DepositInvestment, AssetType.InsuranceInvestment].includes(
-                asset.assetType
-              )
-            "
             required
           >
             <el-date-picker
@@ -216,12 +238,16 @@ const goBack = () => {
 
         <!-- 添加资产按钮移到这里 -->
         <div class="add-asset-button">
-          <el-button type="primary" @click="addAssetForm" icon="el-icon-plus" size="large">添加资产</el-button>
+          <el-button type="primary" icon="el-icon-plus" size="large" @click="addAssetForm"
+            >添加资产</el-button
+          >
         </div>
       </div>
 
       <el-form-item class="form-actions">
-        <el-button type="primary" native-type="submit" :loading="loading">{{ isEditMode ? '保存' : '提交' }}</el-button>
+        <el-button type="primary" native-type="submit" :loading="loading">{{
+          isEditMode ? '保存' : '提交'
+        }}</el-button>
         <el-button @click="goBack">取消</el-button>
       </el-form-item>
     </el-form>

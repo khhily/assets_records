@@ -1,0 +1,15 @@
+node_modules
+dist
+*.svg
+*.ico
+.DS_Store
+.eslintignore
+.editorconfig
+.prettierignore
+*.png
+*.toml
+*.lock
+package-lock.json
+*.md
+.vscode
+.idea

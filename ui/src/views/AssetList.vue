@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted } from 'vue';
 import { useAssetStore } from '../stores/assetStore';
 import { AssetTypeNames } from '../types';
 import { useRouter } from 'vue-router';
@@ -94,13 +94,17 @@ const formatDate = (dateString?: string): string => {
             <h2>批次: {{ batch.batchNo }}</h2>
             <div class="batch-meta">
               <span class="batch-amount"
-                >总金额: <span class="amount-value">{{ batch.totalAmount?.toLocaleString() || '0' }}</span> 元</span
+                >总金额:
+                <span class="amount-value">{{ batch.totalAmount?.toLocaleString() || '0' }}</span>
+                元</span
               >
               <span class="batch-time">最后更新: {{ formatDate(batch.lastModifiedTime) }}</span>
             </div>
           </div>
           <div class="batch-actions">
-            <el-button type="primary" size="small" @click="navigateToEdit(batch.id)">编辑</el-button>
+            <el-button type="primary" size="small" @click="navigateToEdit(batch.id)"
+              >编辑</el-button
+            >
             <el-button type="danger" size="small" @click="confirmDelete(batch.id)">
               <el-icon><Delete /></el-icon>
             </el-button>
@@ -138,7 +142,7 @@ const formatDate = (dateString?: string): string => {
               <span class="asset-card-label">金额:</span>
               <span class="asset-card-value amount">{{ asset.amount.toLocaleString() }}</span>
             </div>
-            <div class="asset-card-item" v-if="asset.maturityDate">
+            <div v-if="asset.maturityDate" class="asset-card-item">
               <span class="asset-card-label">到期时间:</span>
               <span class="asset-card-value">{{ formatDate(asset.maturityDate) }}</span>
             </div>

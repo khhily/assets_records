@@ -1,7 +1,12 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { Asset, Batch, AssetBatchResponse } from '../types';
-import { getAssets, createAssets as apiCreateAssets, updateAssets as apiUpdateAssets, deleteBatch } from '../api';
+import {
+  getAssets,
+  createAssets as apiCreateAssets,
+  updateAssets as apiUpdateAssets,
+  deleteBatch,
+} from '../api';
 
 export const useAssetStore = defineStore('asset', () => {
   const assets = ref<AssetBatchResponse[]>([]);
@@ -10,7 +15,7 @@ export const useAssetStore = defineStore('asset', () => {
 
   // 按批次分组的资产
   const assetsByBatch = computed(() => {
-    return assets.value.map((item) => ({
+    return assets.value.map(item => ({
       id: item.batch.id,
       batchNo: item.batch.batchNo,
       createdTime: item.batch.createdTime,

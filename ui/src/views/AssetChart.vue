@@ -1,22 +1,20 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAssetStore } from '../stores/assetStore';
 import { use } from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
 import { LineChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent, TitleComponent, LegendComponent } from 'echarts/components';
-import VChart from 'vue-echarts';
-
-// 注册 ECharts 组件
-use([
-  CanvasRenderer,
-  LineChart,
+import {
   GridComponent,
   TooltipComponent,
   TitleComponent,
-  LegendComponent
-]);
+  LegendComponent,
+} from 'echarts/components';
+import VChart from 'vue-echarts';
+
+// 注册 ECharts 组件
+use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, TitleComponent, LegendComponent]);
 
 const router = useRouter();
 const assetStore = useAssetStore();
@@ -27,7 +25,7 @@ const batchTotals = computed(() => {
     const total = batch.assets.reduce((sum, asset) => sum + asset.amount, 0);
     return {
       batchId: batch.id,
-      total
+      total,
     };
   });
 });
@@ -37,19 +35,19 @@ const chartOption = computed(() => {
   return {
     title: {
       text: '批次资产总额',
-      left: 'center'
+      left: 'center',
     },
     tooltip: {
       trigger: 'axis',
-      formatter: '{b}: {c} 元'
+      formatter: '{b}: {c} 元',
     },
     xAxis: {
       type: 'category',
-      data: batchTotals.value.map(item => item.batchId)
+      data: batchTotals.value.map(item => item.batchId),
     },
     yAxis: {
       type: 'value',
-      name: '金额 (元)'
+      name: '金额 (元)',
     },
     series: [
       {
@@ -60,11 +58,11 @@ const chartOption = computed(() => {
         markPoint: {
           data: [
             { type: 'max', name: '最大值' },
-            { type: 'min', name: '最小值' }
-          ]
-        }
-      }
-    ]
+            { type: 'min', name: '最小值' },
+          ],
+        },
+      },
+    ],
   };
 });
 
@@ -83,7 +81,7 @@ const goBack = () => {
     <div v-if="batchTotals.length === 0" class="empty-state">
       <el-empty description="暂无资产数据" />
     </div>
-    
+
     <div v-else class="chart-wrapper">
       <v-chart class="chart" :option="chartOption" autoresize />
     </div>
