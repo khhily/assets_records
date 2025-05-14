@@ -1,0 +1,1 @@
+rsync -av -r ./AssetsRecordsApi/bin/Release/net8.0/linux-x64/publish/* root@124.71.97.110:/root/apis/assets-records
